@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Juego Pibes - Control</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="phone">
+
+<div id="join" class="screen">
+  <h1 style="text-align:center">🏁 Juego Pibes</h1>
+  <div id="codebox">
+    <div class="label">Código de sala</div>
+    <input id="icode" maxlength="4" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase">
+  </div>
+  <div class="label">Tu nombre</div>
+  <input id="iname" maxlength="12" placeholder="Nombre" autocomplete="off">
+  <div class="label">Elegí tu auto: <b id="carname"></b></div>
+  <div id="grid"></div>
+  <div class="label">Color</div>
+  <div id="colors"></div>
+  <div id="err" style="color:#ff8a80; text-align:center; font-weight:700"></div>
+  <button id="go" class="big" style="position:sticky; bottom:10px">¡Entrar!</button>
+</div>
+
+<div id="wait" class="screen hidden" style="text-align:center">
+  <h1 id="wtitle">¡Estás adentro!</h1>
+  <canvas id="mycar" width="440" height="276"></canvas>
+  <div id="wname" style="font-size:1.4em; font-weight:800"></div>
+  <div id="wmsg" style="opacity:.8"></div>
+  <button id="change" class="sec">Cambiar auto</button>
+  <div id="boss" class="hidden">
+    <div class="label">Sos el anfitrión 👑</div>
+    <div class="label">Pista</div>
+    <div class="stepper"><button data-cfg="track" data-d="-1">◀</button><span id="track"></span><button data-cfg="track" data-d="1">▶</button></div>
+    <div class="label">Vueltas</div>
+    <div class="stepper"><button data-cfg="laps" data-d="-1">−</button><span id="laps"></span><button data-cfg="laps" data-d="1">+</button></div>
+    <div class="label">Modo</div>
+    <div class="stepper"><button data-cfg="races" data-d="-1">−</button><span id="races"></span><button data-cfg="races" data-d="1">+</button></div>
+    <div class="label">Bots</div>
+    <div class="stepper"><button data-cfg="bots" data-d="-1">−</button><span id="bots"></span><button data-cfg="bots" data-d="1">+</button></div>
+    <button id="start" class="big" style="margin-top:16px; width:100%">¡EMPEZAR!</button>
+  </div>
+</div>
+
+<div id="race" class="hidden">
+  <div id="rtop"><span id="rpos">-</span><span id="rmsg"></span><span id="rlap">-</span></div>
+  <div id="pads">
+    <div class="pad" id="bl">◀</div>
+    <div class="pad" id="bpw"><div id="pwfill"></div><span class="ico">🔥</span><span id="pwname">NITRO</span></div>
+    <div class="pad" id="br">▶</div>
+  </div>
+</div>
+
+<div id="end" class="screen hidden" style="text-align:center">
+  <h1 id="endtitle">🏆 Final</h1>
+  <div id="endpos"></div>
+  <div id="endtime" style="font-size:1.3em; font-weight:700"></div>
+  <div class="label" id="endlabel">Posiciones</div>
+  <div id="endlist" style="text-align:left; background:#0005; border-radius:14px; padding:10px 16px; line-height:1.8"></div>
+  <button id="next" class="big hidden"></button>
+  <button id="again" class="big hidden">Volver al lobby</button>
+  <div id="endmsg" style="opacity:.8">Esperando al anfitrión…</div>
+</div>
+
+<script src="/shared/cars.js"></script>
+<script src="/play.js"></script>
+</body>
+</html>
