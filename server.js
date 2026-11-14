@@ -303,6 +303,7 @@ setInterval(() => {
     for (const p of [...room.players.values()]) {
       if (!p.bot && !p.ws && p.gone && now - p.gone > (room.state === 'race' ? 120000 : 15000)) {
         if (room.state === 'race' && room.racers.includes(p.pid)) continue;
+        if (room.tour && room.tour.table[p.pid]) continue;
         room.players.delete(p.pid);
         changed = true;
       }
