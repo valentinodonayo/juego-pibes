@@ -64,7 +64,7 @@
     ws.onclose = () => { if (wanted) setTimeout(connect, 1000); };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
-      if (m.t === 'joined') { pid = m.pid; sessionStorage.setItem('pid-' + code, pid); sessionStorage.setItem('key-' + code, m.key); }
+      if (m.t === 'joined') { pid = m.pid; history.replaceState(null, '', '?r=' + code); sessionStorage.setItem('pid-' + code, pid); sessionStorage.setItem('key-' + code, m.key); }
       else if (m.t === 'err') { wanted = false; editing = true; pid = null; sessionStorage.removeItem('pid-' + code); $('err').textContent = m.msg; $('codebox').classList.remove('hidden'); show(); }
       else if (m.t === 'lobby') { if (!room || room.state !== m.state) me = null; room = m; show(); }
       else if (m.t === 'me') { me = m; showRace(); }
@@ -97,8 +97,10 @@
       const i = room.results.findIndex((r) => r.pid === pid), r = room.results[i];
       const tour = room.tour, pending = tour && tour.done < tour.n;
       $('endtitle').textContent = !tour ? '🏆 Final' : pending ? 'Carrera ' + tour.done + ' de ' + tour.n : '🏆 Final del torneo';
-      $('endpos').textContent = r ? (i + 1) + '°' : '—';
-      $('endtime').textContent = !r ? 'No corriste esta carrera' : (r.time == null ? 'No llegaste a terminar' : 'Tiempo: ' + fmt(r.time)) + (tour ? ' · +' + r.pts + ' pts' : '');
+      const last = !r ? 'No corriste esta carrera' : (r.time == null ? 'No llegaste a terminar' : 'Tiempo: ' + fmt(r.time)) + (tour ? ' · +' + r.pts + ' pts' : '');
+      const ti = tour && !pending ? tour.table.findIndex((x) => x.pid === pid) : -1;
+      $('endpos').textContent = ti >= 0 ? (ti + 1) + '°' : r ? (i + 1) + '°' : '—';
+      $('endtime').textContent = ti >= 0 ? tour.table[ti].pts + ' pts · última carrera: ' + (r ? (i + 1) + '°' : 'no corriste') : last;
       const rows = tour ? tour.table.map((x) => [x, x.pts + ' pts']) : room.results.map((x) => [x, x.time == null ? '' : fmt(x.time)]);
       $('endlabel').textContent = tour ? 'Tabla del torneo' : 'Posiciones';
       $('endlist').replaceChildren(...rows.map(([x, v], k) => {
