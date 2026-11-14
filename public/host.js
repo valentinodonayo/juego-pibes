@@ -11,11 +11,12 @@
   // ---------- Conexión ----------
   function connect() {
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
-    ws.onopen = () => ws.send(JSON.stringify({ t: 'host', code: sessionStorage.getItem('room') || '' }));
+    ws.onopen = () => ws.send(JSON.stringify({ t: 'host', code: sessionStorage.getItem('room') || '', key: sessionStorage.getItem('hostkey') || '' }));
     ws.onclose = () => setTimeout(connect, 1000);
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
-      if (m.t === 'lobby') onLobby(m);
+      if (m.t === 'hostkey') sessionStorage.setItem('hostkey', m.key);
+      else if (m.t === 'lobby') onLobby(m);
       else if (m.t === 's') {
         prev = cur; cur = m; cur.at = performance.now();
         for (const ev of m.ev || []) effects.push({ k: ev.k, x: ev.x, y: ev.y, at: cur.at });

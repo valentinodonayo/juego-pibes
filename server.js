@@ -1,4 +1,5 @@
 const http = require('http');
+const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -92,7 +93,7 @@ function sendLobby(room) {
 }
 
 function clean(s, max) {
-  return String(s || '').replace(/[<>&"']/g, '').trim().slice(0, max);
+  return (typeof s === 'string' ? s : '').replace(/[<>&"']/g, '').trim().slice(0, max);
 }
 
 function setBots(room, n) {
@@ -154,14 +155,15 @@ wss.on('connection', (ws) => {
 
     if (m.t === 'host') {
       let r = rooms.get(String(m.code || '').toUpperCase());
-      if (!r) {
-        r = { code: newCode(), players: new Map(), track: 0, laps: 3, state: 'lobby', nextId: 1, race: null, host: null };
+      if (!r || m.key !== r.hostKey) {
+        r = { code: newCode(), hostKey: crypto.randomBytes(16).toString('hex'), players: new Map(), track: 0, laps: 3, state: 'lobby', nextId: 1, race: null, host: null };
         rooms.set(r.code, r);
       }
       r.host = ws;
       r.hostGone = null;
       ws.room = r;
       ws.role = 'host';
+      send(ws, { t: 'hostkey', key: r.hostKey });
       return sendLobby(r);
     }
 
@@ -169,13 +171,16 @@ wss.on('connection', (ws) => {
       const r = rooms.get(String(m.code || '').toUpperCase());
       if (!r) return send(ws, { t: 'err', msg: 'No existe esa sala' });
       let p = m.pid && r.players.get(m.pid);
-      if (p && p.bot) p = null;
+      const old = ws.room && ws.role === 'player' && ws.room.players.get(ws.pid);
+      if (old && old.ws === ws && old !== p) { old.ws = null; old.gone = Date.now(); }
+      if (p && (p.bot || m.key !== p.key)) p = null;
       if (!p) {
         const humans = [...r.players.values()].filter((x) => !x.bot);
         if (humans.length >= MAX_PLAYERS) return send(ws, { t: 'err', msg: 'La sala está llena' });
+        if (r.players.size >= MAX_PLAYERS && r.state === 'race') return send(ws, { t: 'err', msg: 'Sala llena, esperá a que termine la carrera' });
         if (r.players.size >= MAX_PLAYERS) setBots(r, MAX_PLAYERS - humans.length - 1);
         const pid = 'p' + (r.nextId++) + Math.random().toString(36).slice(2, 8);
-        p = { pid, name: 'Pibe', car: 0, color: 0 };
+        p = { pid, key: crypto.randomBytes(16).toString('hex'), name: 'Pibe', car: 0, color: 0 };
         r.players.set(pid, p);
       } else if (p.ws && p.ws !== ws) {
         p.ws.room = null;
@@ -189,7 +194,8 @@ wss.on('connection', (ws) => {
       ws.room = r;
       ws.role = 'player';
       ws.pid = p.pid;
-      send(ws, { t: 'joined', pid: p.pid, code: r.code });
+      send(ws, { t: 'joined', pid: p.pid, key: p.key, code: r.code });
+      if (r.race) r.race.setAuto(p.pid, false);
       if (r.lastMe) delete r.lastMe[p.pid];
       return sendLobby(r);
     }
@@ -217,7 +223,7 @@ wss.on('connection', (ws) => {
       if (p && p.ws === ws) {
         p.ws = null;
         p.gone = Date.now();
-        if (room.race) room.race.setSteer(p.pid, 0);
+        if (room.race) room.race.setAuto(p.pid, true);
         sendLobby(room);
       }
     }

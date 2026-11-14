@@ -53,7 +53,7 @@
   // ---------- Conexión ----------
   function join() {
     pid = pid || sessionStorage.getItem('pid-' + code);
-    ws.send(JSON.stringify({ t: 'join', code, name, car, color, pid }));
+    ws.send(JSON.stringify({ t: 'join', code, name, car, color, pid, key: sessionStorage.getItem('key-' + code) }));
   }
   function connect() {
     ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
@@ -61,7 +61,7 @@
     ws.onclose = () => { if (wanted) setTimeout(connect, 1000); };
     ws.onmessage = (e) => {
       const m = JSON.parse(e.data);
-      if (m.t === 'joined') { pid = m.pid; sessionStorage.setItem('pid-' + code, pid); }
+      if (m.t === 'joined') { pid = m.pid; sessionStorage.setItem('pid-' + code, pid); sessionStorage.setItem('key-' + code, m.key); }
       else if (m.t === 'err') { wanted = false; editing = true; pid = null; sessionStorage.removeItem('pid-' + code); $('err').textContent = m.msg; $('codebox').classList.remove('hidden'); show(); }
       else if (m.t === 'lobby') { if (!room || room.state !== m.state) me = null; room = m; show(); }
       else if (m.t === 'me') { me = m; showRace(); }
