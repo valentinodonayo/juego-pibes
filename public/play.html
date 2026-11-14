@@ -37,6 +37,8 @@
     <div class="stepper"><button data-cfg="track" data-d="-1">◀</button><span id="track"></span><button data-cfg="track" data-d="1">▶</button></div>
     <div class="label">Vueltas</div>
     <div class="stepper"><button data-cfg="laps" data-d="-1">−</button><span id="laps"></span><button data-cfg="laps" data-d="1">+</button></div>
+    <div class="label">Modo</div>
+    <div class="stepper"><button data-cfg="races" data-d="-1">−</button><span id="races"></span><button data-cfg="races" data-d="1">+</button></div>
     <div class="label">Bots</div>
     <div class="stepper"><button data-cfg="bots" data-d="-1">−</button><span id="bots"></span><button data-cfg="bots" data-d="1">+</button></div>
     <button id="start" class="big" style="margin-top:16px; width:100%">¡EMPEZAR!</button>
@@ -47,16 +49,18 @@
   <div id="rtop"><span id="rpos">-</span><span id="rmsg"></span><span id="rlap">-</span></div>
   <div id="pads">
     <div class="pad" id="bl">◀</div>
-    <div class="pad" id="bpw"><span class="ico" id="pwico">·</span><span id="pwname">sin poder</span></div>
+    <div class="pad" id="bpw"><div id="pwfill"></div><span class="ico">🔥</span><span id="pwname">NITRO</span></div>
     <div class="pad" id="br">▶</div>
   </div>
 </div>
 
 <div id="end" class="screen hidden" style="text-align:center">
-  <h1>🏆 Final</h1>
+  <h1 id="endtitle">🏆 Final</h1>
   <div id="endpos"></div>
   <div id="endtime" style="font-size:1.3em; font-weight:700"></div>
+  <div class="label" id="endlabel">Posiciones</div>
   <div id="endlist" style="text-align:left; background:#0005; border-radius:14px; padding:10px 16px; line-height:1.8"></div>
+  <button id="next" class="big hidden"></button>
   <button id="again" class="big hidden">Volver al lobby</button>
   <div id="endmsg" style="opacity:.8">Esperando al anfitrión…</div>
 </div>

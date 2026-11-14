@@ -2,7 +2,15 @@
   const $ = (id) => document.getElementById(id);
   const cv = $('cv'), g = cv.getContext('2d');
   const { WORLD } = Tracks;
-  const POWER_ICON = '?';
+  // Paisajes: fondo, manchas del suelo, banquina, borde, asfalto y decoración
+  const THEMES = {
+    pasto: { ground: '#86b049', blobs: ['rgba(60,110,40,.25)', 'rgba(170,200,90,.25)'], runoff: '#ead9a7', edge: '#4b5d2e', road: '#3b3f45', deco: ['#3f7d2c', '#56a03a'] },
+    desierto: { ground: '#d9b56c', blobs: ['rgba(170,120,50,.25)', 'rgba(240,215,150,.35)'], runoff: '#c79a55', edge: '#8a6a34', road: '#4a4440', deco: ['#5d8a3a', '#7fae4e'] },
+    noche: { ground: '#1f2a44', blobs: ['rgba(10,15,35,.4)', 'rgba(60,80,130,.25)'], runoff: '#4a5578', edge: '#0d1326', road: '#2a2d36', deco: ['#ffd54f', '#fff59d'] },
+    playa: { ground: '#f0d9a0', blobs: ['rgba(60,170,200,.3)', 'rgba(255,240,200,.4)'], runoff: '#e6c27a', edge: '#b9965a', road: '#454a52', deco: ['#2e9e6b', '#55c98d'] },
+    nieve: { ground: '#e8f1f7', blobs: ['rgba(170,200,225,.35)', 'rgba(255,255,255,.6)'], runoff: '#c5d6e2', edge: '#8fa6b8', road: '#4b535c', deco: ['#2f6b52', '#f4fbff'] },
+    ciudad: { ground: '#8d9299', blobs: ['rgba(70,75,85,.3)', 'rgba(170,175,185,.3)'], runoff: '#b9b4a4', edge: '#55585e', road: '#33363b', deco: ['#b0553a', '#d98a5f'] },
+  };
   let W = 0, H = 0, dpr = 1, scale = 1, ox = 0, oy = 0;
   let room = null, tk = null, bg = null, ws = null;
   let prev = null, cur = null, racers = [], effects = [], lastCount = null;
@@ -72,19 +80,37 @@
     $('code').textContent = m.code;
     $('track').textContent = m.tracks[m.track];
     $('laps').textContent = m.laps;
+    $('races').textContent = m.races === 1 ? 'Carrera única' : 'Torneo de ' + m.races;
     $('bots').textContent = m.players.filter((p) => p.bot).length;
     $('pcount').textContent = m.players.length;
     $('empty').classList.toggle('hidden', m.players.length > 0);
     $('start').disabled = !m.players.some((p) => p.on);
     $('plist').replaceChildren(...m.players.map((p) => card(p)));
     if (m.results) {
+      const tour = m.tour, pending = tour && tour.done < tour.n;
+      $('rtitle').textContent = !tour ? '🏆 Resultados' : pending ? 'Carrera ' + tour.done + ' de ' + tour.n + ' · ' + m.tracks[m.track] : '🏆 Final del torneo';
       $('rlist').replaceChildren(...m.results.map((r, i) => {
         const d = card(r, '<b>' + (i + 1) + '°</b>');
         const t = document.createElement('em');
-        t.textContent = r.time == null ? 'No llegó' : fmt(r.time);
+        t.textContent = (r.time == null ? 'No llegó' : fmt(r.time)) + (tour ? '  +' + r.pts : '');
         d.appendChild(t);
         return d;
       }));
+      $('tbox').classList.toggle('hidden', !tour);
+      if (tour) {
+        $('tlist').replaceChildren(...tour.table.map((r, i) => {
+          const d = card(r, '<b>' + (i + 1) + '°</b>');
+          const t = document.createElement('em');
+          t.textContent = r.pts + ' pts';
+          d.appendChild(t);
+          if (!pending && i === 0) d.classList.add('champ');
+          return d;
+        }));
+      }
+      $('next').classList.toggle('hidden', !pending);
+      if (pending) $('next').textContent = 'Siguiente carrera: ' + m.tracks[tour.tracks[tour.done]];
+      $('again').textContent = pending ? 'Terminar torneo' : 'Volver al lobby';
+      $('again').className = pending ? 'sec' : 'big';
     }
     const url = await joinUrl(m.code);
     if ($('url').textContent !== url) {
@@ -92,7 +118,7 @@
       $('qr').src = '/qr?t=' + encodeURIComponent(url);
     }
     if (first && demo && m.state === 'lobby') {
-      send({ t: 'cfg', bots: Number(demo) || 6, track: Number(new URLSearchParams(location.search).get('track')) || 0 });
+      send({ t: 'cfg', bots: Number(demo) || 6, races: Number(new URLSearchParams(location.search).get('races')) || 1, track: Number(new URLSearchParams(location.search).get('track')) || 0 });
       send({ t: 'start' });
     }
   }
@@ -104,6 +130,7 @@
     send({ t: 'cfg', [k]: curv + d });
   }));
   $('start').onclick = () => { beep(0); send({ t: 'start' }); };
+  $('next').onclick = () => { beep(0); send({ t: 'start' }); };
   $('again').onclick = () => send({ t: 'lobby' });
   $('fs').onclick = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
   document.addEventListener('fullscreenchange', () => $('fs').classList.toggle('hidden', !!document.fullscreenElement));
@@ -149,47 +176,56 @@
   }
 
   function renderBg() {
+    const th = THEMES[tk.theme] || THEMES.pasto;
     bg = document.createElement('canvas');
     bg.width = cv.width; bg.height = cv.height;
     const c = bg.getContext('2d');
-    c.fillStyle = '#6f9a3e';
+    c.fillStyle = th.ground;
     c.fillRect(0, 0, bg.width, bg.height);
     worldTransform(c);
-    c.fillStyle = '#86b049';
-    c.fillRect(0, 0, WORLD.w, WORLD.h);
     const rnd = rng(tk.index * 977 + 13);
     for (let i = 0; i < 60; i++) {
-      c.fillStyle = i % 2 ? 'rgba(60,110,40,.25)' : 'rgba(170,200,90,.25)';
+      c.fillStyle = th.blobs[i % 2];
       c.beginPath();
       c.ellipse(rnd() * WORLD.w, rnd() * WORLD.h, 60 + rnd() * 160, 40 + rnd() * 90, rnd() * 3, 0, 7);
       c.fill();
     }
-    const path = () => {
-      c.beginPath();
-      c.moveTo(tk.x[0], tk.y[0]);
-      for (let i = 1; i < tk.N; i++) c.lineTo(tk.x[i], tk.y[i]);
-      c.closePath();
+    // La pista tiene ancho variable: se dibuja por tramos, cada uno con su ancho
+    c.lineCap = 'round';
+    const layer = (color, extra, pick) => {
+      c.strokeStyle = color;
+      for (let i = 0; i < tk.N; i++) {
+        if (pick && !pick(i)) continue;
+        const j = (i + 1) % tk.N;
+        c.lineWidth = tk.half[i] * 2 + extra;
+        c.beginPath(); c.moveTo(tk.x[i], tk.y[i]); c.lineTo(tk.x[j], tk.y[j]); c.stroke();
+      }
     };
-    c.lineJoin = 'round';
-    const w = tk.width, full = w + tk.runoff * 2;
-    path(); c.strokeStyle = '#4b5d2e'; c.lineWidth = full + 14; c.stroke();
-    path(); c.strokeStyle = '#ead9a7'; c.lineWidth = full; c.stroke();
-    path(); c.strokeStyle = '#fff'; c.lineWidth = w + 26; c.stroke();
-    path(); c.strokeStyle = '#d32f2f'; c.lineWidth = w + 26; c.setLineDash([36, 36]); c.stroke(); c.setLineDash([]);
-    path(); c.strokeStyle = '#3b3f45'; c.lineWidth = w; c.stroke();
-    path(); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 4; c.setLineDash([34, 46]); c.stroke(); c.setLineDash([]);
+    layer(th.edge, tk.runoff * 2 + 14);
+    layer(th.runoff, tk.runoff * 2);
+    layer('#fff', 26);
+    c.lineCap = 'butt';
+    layer('#d32f2f', 26, (i) => i % 4 < 2);
+    c.lineCap = 'round';
+    layer(th.road, 0);
+    c.beginPath();
+    c.moveTo(tk.x[0], tk.y[0]);
+    for (let i = 1; i < tk.N; i++) c.lineTo(tk.x[i], tk.y[i]);
+    c.closePath();
+    c.lineCap = 'butt';
+    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 4; c.setLineDash([34, 46]); c.stroke(); c.setLineDash([]);
     // Línea de largada
     c.save();
     c.translate(tk.x[0], tk.y[0]);
     c.rotate(Math.atan2(tk.ty[0], tk.tx[0]));
-    const n = 10, s = w / n;
+    const w = tk.half[0] * 2, n = 10, s = w / n;
     for (let i = 0; i < n; i++) for (let j = 0; j < 2; j++) {
       c.fillStyle = (i + j) % 2 ? '#111' : '#fff';
       c.fillRect(-s + j * s, -w / 2 + i * s, s, s);
     }
     c.restore();
-    // Árboles lejos de la pista
-    const limit = w / 2 + tk.runoff + 70;
+    // Decoración lejos de la pista
+    const limit = tk.maxHalf + tk.runoff + 70;
     for (let i = 0, placed = 0; i < 600 && placed < 90; i++) {
       const x = rnd() * WORLD.w, y = rnd() * WORLD.h;
       let ok = true;
@@ -199,10 +235,10 @@
       }
       if (!ok) continue;
       placed++;
-      const r = 26 + rnd() * 22;
+      const r = tk.theme === 'noche' ? 5 + rnd() * 5 : 26 + rnd() * 22;
       c.fillStyle = 'rgba(0,0,0,.2)'; c.beginPath(); c.arc(x + 8, y + 10, r, 0, 7); c.fill();
-      c.fillStyle = '#3f7d2c'; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
-      c.fillStyle = '#56a03a'; c.beginPath(); c.arc(x - r * 0.25, y - r * 0.25, r * 0.6, 0, 7); c.fill();
+      c.fillStyle = th.deco[0]; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+      c.fillStyle = th.deco[1]; c.beginPath(); c.arc(x - r * 0.25, y - r * 0.25, r * 0.6, 0, 7); c.fill();
     }
   }
 
@@ -226,35 +262,12 @@
     const tm = cur.tm + Math.min(0.1, (now - cur.at) / 1000);
     worldTransform(g);
 
-    // Manchas de aceite
-    for (const o of cur.o) {
-      g.fillStyle = 'rgba(15,15,20,.85)';
-      g.beginPath(); g.ellipse(o[0], o[1], 34, 26, 0.5, 0, 7); g.fill();
-      g.beginPath(); g.ellipse(o[0] + 22, o[1] - 14, 13, 10, 0, 0, 7); g.fill();
-      g.fillStyle = 'rgba(255,255,255,.25)';
-      g.beginPath(); g.ellipse(o[0] - 8, o[1] - 8, 9, 5, 0.5, 0, 7); g.fill();
-    }
-    // Cajas de poderes
-    const bob = Math.sin(now / 200) * 3;
-    for (let i = 0; i < tk.items.length; i++) {
-      if (cur.it[i] !== '1') continue;
-      const it = tk.items[i];
-      g.save();
-      g.translate(it.x, it.y);
-      g.rotate(now / 900 + i);
-      g.fillStyle = '#ffca28'; g.strokeStyle = '#e65100'; g.lineWidth = 4;
-      g.beginPath(); g.rect(-17 - bob / 2, -17 - bob / 2, 34 + bob, 34 + bob); g.fill(); g.stroke();
-      g.rotate(-(now / 900 + i));
-      g.fillStyle = '#bf360c'; g.font = '900 30px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(POWER_ICON, 0, 2);
-      g.restore();
-    }
     // Autos
     const pos = [];
     for (let i = 0; i < cur.c.length; i++) {
       const c1 = cur.c[i], c0 = (a.c[i] || c1), p = racers[i] || { car: 0, color: 0, name: '' };
       const x = c0[0] + (c1[0] - c0[0]) * f, y = c0[1] + (c1[1] - c0[1]) * f;
-      const ang = c1[3] & 2 ? c1[2] : lerpAngle(c0[2], c1[2], Math.min(1, f));
+      const ang = lerpAngle(c0[2], c1[2], Math.min(1, f));
       pos.push([x, y]);
       g.globalAlpha = c1[3] & 4 ? 0.45 : 1;
       if (c1[3] & 1) {
@@ -271,10 +284,7 @@
     effects = effects.filter((e) => now - e.at < 600);
     for (const e of effects) {
       const t = (now - e.at) / 600;
-      if (e.k === 'boom') {
-        g.strokeStyle = 'rgba(255,235,59,' + (1 - t) + ')'; g.lineWidth = 14 * (1 - t) + 2;
-        g.beginPath(); g.arc(e.x, e.y, 30 + 290 * t, 0, 7); g.stroke();
-      } else if (t < 0.5) {
+      if (t < 0.5) {
         g.fillStyle = 'rgba(255,255,255,' + (1 - t * 2) + ')';
         for (let k = 0; k < 6; k++) {
           const an = k * 1.05 + e.x;
@@ -301,7 +311,7 @@
     g.textAlign = 'left'; g.textBaseline = 'middle';
     g.font = '800 ' + Math.round(rh * 0.62) + 'px system-ui';
     g.fillStyle = '#ffeb3b';
-    g.fillText(room.tracks[room.track] + ' · ' + (tm > 0 ? fmt(tm) : '0:00.00'), 20, 10 + rh * 0.7);
+    g.fillText((room.tour ? (room.tour.done + 1) + '/' + room.tour.n + ' ' : '') + room.tracks[room.track] + ' · ' + (tm > 0 ? fmt(tm) : '0:00.00'), 20, 10 + rh * 0.7);
     cur.r.forEach((ci, k) => {
       const p = racers[ci]; if (!p) return;
       const y = 10 + rh * (k + 1.9);

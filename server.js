@@ -15,6 +15,8 @@ const PAGES = { '/': '/index.html', '/host': '/host.html', '/play': '/play.html'
 const MAX_PLAYERS = 12;
 const BOT_NAMES = ['Bot Carlitos', 'Bot Tincho', 'Bot Pepa', 'Bot Chino', 'Bot Fideo', 'Bot Rulo', 'Bot Mecha', 'Bot Tano', 'Bot Pocho', 'Bot Lola', 'Bot Kuki', 'Bot Ñoqui'];
 const COLORS = 10, CAR_DESIGNS = 26;
+const MAX_RACES = 8;
+const POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 3, 2, 1, 0]; // puntos de torneo por posición
 
 function lanIPs() {
   const out = [];
@@ -80,7 +82,8 @@ function ensureLeader(room) {
 
 function lobbyMsg(room) {
   return {
-    t: 'lobby', code: room.code, state: room.state, track: room.track, laps: room.laps, tracks: Tracks.names,
+    t: 'lobby', code: room.code, state: room.state, track: room.track, laps: room.laps, races: room.races, tracks: Tracks.names,
+    tour: room.tour ? { done: room.tour.done, n: room.tour.n, tracks: room.tour.tracks, table: Object.values(room.tour.table).sort((a, b) => b.pts - a.pts) } : null,
     players: [...room.players.values()].map((p) => ({ pid: p.pid, name: p.name, car: p.car, color: p.color, leader: !!p.leader, bot: !!p.bot, on: !!p.ws || !!p.bot })),
     racers: room.racers || [],
     results: room.results || null,
@@ -111,6 +114,18 @@ function startRace(room) {
   if (room.state === 'race') return;
   const entries = [...room.players.values()].filter((p) => p.bot || p.ws);
   if (!entries.length) return;
+  if (room.tour && room.tour.done >= room.tour.n) room.tour = null;
+  if (!room.tour && room.races > 1) {
+    // Torneo: arranca en la pista elegida y sigue por las demás en orden aleatorio
+    const rest = Tracks.DEFS.map((_, i) => i).filter((i) => i !== room.track);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    const order = [room.track, ...rest];
+    room.tour = { n: room.races, done: 0, tracks: Array.from({ length: room.races }, (_, i) => order[i % order.length]), table: {} };
+  }
+  if (room.tour) room.track = room.tour.tracks[room.tour.done];
   for (let i = entries.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [entries[i], entries[j]] = [entries[j], entries[i]];
@@ -126,10 +141,17 @@ function startRace(room) {
 
 function endRace(room) {
   const race = room.race;
-  room.results = race.ranking().map((i) => {
+  room.results = race.ranking().map((i, pos) => {
     const c = race.cars[i], p = room.players.get(c.pid) || {};
-    return { pid: c.pid, name: p.name || '?', car: p.car || 0, color: p.color || 0, time: c.time };
+    const r = { pid: c.pid, name: p.name || '?', car: p.car || 0, color: p.color || 0, time: c.time };
+    if (room.tour) {
+      r.pts = POINTS[pos] || 0;
+      const row = room.tour.table[c.pid] || (room.tour.table[c.pid] = { pid: c.pid, pts: 0 });
+      Object.assign(row, { name: r.name, car: r.car, color: r.color, pts: row.pts + r.pts });
+    }
+    return r;
   });
+  if (room.tour) room.tour.done++;
   room.race = null;
   room.state = 'results';
   sendLobby(room);
@@ -137,7 +159,8 @@ function endRace(room) {
 
 function configure(room, m) {
   if (room.state === 'race') return;
-  if (Number.isInteger(m.track)) room.track = ((m.track % Tracks.DEFS.length) + Tracks.DEFS.length) % Tracks.DEFS.length;
+  if (Number.isInteger(m.races) && !room.tour) room.races = Math.max(1, Math.min(MAX_RACES, m.races));
+  if (Number.isInteger(m.track) && !room.tour) room.track = ((m.track % Tracks.DEFS.length) + Tracks.DEFS.length) % Tracks.DEFS.length;
   if (Number.isInteger(m.laps)) room.laps = Math.max(1, Math.min(10, m.laps));
   if (Number.isInteger(m.bots)) setBots(room, m.bots);
   sendLobby(room);
@@ -156,7 +179,7 @@ wss.on('connection', (ws) => {
     if (m.t === 'host') {
       let r = rooms.get(String(m.code || '').toUpperCase());
       if (!r || m.key !== r.hostKey) {
-        r = { code: newCode(), hostKey: crypto.randomBytes(16).toString('hex'), players: new Map(), track: 0, laps: 3, state: 'lobby', nextId: 1, race: null, host: null };
+        r = { code: newCode(), hostKey: crypto.randomBytes(16).toString('hex'), players: new Map(), track: 0, laps: 3, races: 1, tour: null, state: 'lobby', nextId: 1, race: null, host: null };
         rooms.set(r.code, r);
       }
       r.host = ws;
@@ -208,7 +231,7 @@ wss.on('connection', (ws) => {
     else if (m.t === 'pw' && player && room.race) room.race.usePower(player.pid);
     else if (m.t === 'cfg' && boss) configure(room, m);
     else if (m.t === 'start' && boss) startRace(room);
-    else if (m.t === 'lobby' && boss && room.state === 'results') { room.state = 'lobby'; sendLobby(room); }
+    else if (m.t === 'lobby' && boss && room.state === 'results') { room.state = 'lobby'; room.tour = null; sendLobby(room); }
     else if (m.t === 'stop' && ws.role === 'host' && room.race) endRace(room);
   });
 
@@ -258,7 +281,7 @@ setInterval(() => {
         rank.forEach((ci, pos) => {
           const c = race.cars[ci], p = room.players.get(c.pid);
           if (!p || !p.ws) return;
-          const s = JSON.stringify({ t: 'me', pos: pos + 1, n: race.cars.length, lap: race.lapOf(c), laps: race.laps, pw: c.power, fin: c.finished, time: c.time, wrong: c.wrong > 1, cd: race.t < 0 ? Math.ceil(-race.t) : 0 });
+          const s = JSON.stringify({ t: 'me', pos: pos + 1, n: race.cars.length, lap: race.lapOf(c), laps: race.laps, pw: Math.floor(c.charge * 10), ni: c.nitro > 0, fin: c.finished, time: c.time, wrong: c.wrong > 1, cd: race.t < 0 ? Math.ceil(-race.t) : 0 });
           if (room.lastMe[c.pid] !== s) { room.lastMe[c.pid] = s; send(p.ws, s); }
         });
       }

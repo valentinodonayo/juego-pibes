@@ -24,15 +24,18 @@ h1 { margin: 0 0 .3em; font-size: 2.2em; letter-spacing: 1px; text-shadow: 0 3px
 #code { font-size: 4em; font-weight: 900; letter-spacing: .15em; color: #ffeb3b; line-height: 1; }
 #url { font-size: 1.05em; opacity: .85; word-break: break-all; }
 #lobby .side { flex: 1; max-width: 900px; display: flex; flex-direction: column; gap: 2vh; max-height: 94vh; }
-#plist, #rlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; overflow: auto; }
+#plist, #rlist, #tlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; overflow: auto; }
 .pcard { display: flex; align-items: center; gap: 8px; background: #fff1; border-radius: 14px; padding: 6px 10px; font-weight: 700; font-size: 1.1em; border-left: 8px solid #fff; }
 .pcard.off { opacity: .4; }
 .pcard canvas { width: 76px; height: 46px; flex: none; }
 .cfg { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
-#rlist { grid-template-columns: 1fr; width: min(700px, 90vw); max-height: 62vh; }
-#rlist .pcard { font-size: 1.4em; }
-#rlist .pcard b { width: 2.2em; text-align: center; font-size: 1.2em; }
-#rlist .pcard span { flex: 1; }
+#rlist, #tlist { grid-template-columns: 1fr; width: min(560px, 44vw); max-height: 62vh; }
+.rcols { display: flex; gap: 3vw; align-items: flex-start; }
+.pcard.champ { background: #ffc10755; }
+.pcard em { font-style: normal; white-space: pre; }
+#rlist .pcard, #tlist .pcard { font-size: 1.2em; }
+#rlist .pcard b, #tlist .pcard b { width: 2.2em; text-align: center; font-size: 1.2em; }
+#rlist .pcard span, #tlist .pcard span { flex: 1; }
 #fs { position: fixed; right: 10px; bottom: 10px; padding: 6px 12px; font-size: .8em; background: #0008; box-shadow: none; z-index: 5; }
 
 /* Celular */
@@ -53,7 +56,12 @@ h1 { margin: 0 0 .3em; font-size: 2.2em; letter-spacing: 1px; text-shadow: 0 3px
 .pad { flex: 1.3; border-radius: 22px; background: #1e88e5; display: flex; align-items: center; justify-content: center; font-size: 5em; font-weight: 900; touch-action: none; box-shadow: inset 0 -10px 0 #0004; }
 .pad.on { background: #64b5f6; box-shadow: inset 0 6px 0 #0004; }
 #bpw { flex: 1; background: #37474f; font-size: 1.2em; flex-direction: column; gap: 6px; color: #fff8; }
-#bpw.has { background: #ff5722; color: #fff; animation: pulse .6s infinite alternate; }
+#bpw.has, #bpw.burn { background: #ff5722; color: #fff; animation: pulse .6s infinite alternate; }
 #bpw .ico { font-size: 3em; line-height: 1; }
 @keyframes pulse { to { filter: brightness(1.35); } }
 #endpos { font-size: 5em; font-weight: 900; color: #ffeb3b; line-height: 1; }
+
+#bpw { position: relative; overflow: hidden; }
+#bpw > span { position: relative; }
+#pwfill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: #ff572266; transition: height .15s linear; }
+#bpw.burn { background: #ffb300; }

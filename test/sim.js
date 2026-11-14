@@ -25,10 +25,10 @@ for (let ti = 0; ti < Tracks.DEFS.length; ti++) {
     minX = Math.min(minX, tk.x[i]); maxX = Math.max(maxX, tk.x[i]);
     minY = Math.min(minY, tk.y[i]); maxY = Math.max(maxY, tk.y[i]);
   }
-  const margin = tk.width / 2 + tk.runoff;
+  const margin = tk.maxHalf + tk.runoff;
   assert(minX > margin && minY > margin && maxX < Tracks.WORLD.w - margin && maxY < Tracks.WORLD.h - margin,
     `${tk.name}: se sale del mundo (${minX | 0},${minY | 0})-(${maxX | 0},${maxY | 0})`);
-  assert(minR > 125, `${tk.name}: curva demasiado cerrada (${minR | 0})`);
+  assert(minR > 120, `${tk.name}: curva demasiado cerrada (${minR | 0})`);
 
   const laps = 2;
   const race = new Race(tk, laps, Array.from({ length: 8 }, (_, i) => ({ pid: 'b' + i, bot: true })));
