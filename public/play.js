@@ -77,7 +77,7 @@
   function show() {
     const mine = room && room.players.find((p) => p.pid === pid);
     const inRace = room && room.state === 'race' && room.racers.includes(pid);
-    const state = editing || !room || !mine ? 'join' : inRace ? 'race' : room.state === 'results' && room.results.some((r) => r.pid === pid) ? 'end' : 'wait';
+    const state = editing || !room || !mine ? 'join' : inRace ? 'race' : room.state === 'results' ? 'end' : 'wait';
     for (const s of ['join', 'wait', 'race', 'end']) $(s).classList.toggle('hidden', s !== state);
     if (!room || !mine) return;
     if (state === 'wait') {
@@ -97,8 +97,8 @@
       const i = room.results.findIndex((r) => r.pid === pid), r = room.results[i];
       const tour = room.tour, pending = tour && tour.done < tour.n;
       $('endtitle').textContent = !tour ? '🏆 Final' : pending ? 'Carrera ' + tour.done + ' de ' + tour.n : '🏆 Final del torneo';
-      $('endpos').textContent = (i + 1) + '°';
-      $('endtime').textContent = (r.time == null ? 'No llegaste a terminar' : 'Tiempo: ' + fmt(r.time)) + (tour ? ' · +' + r.pts + ' pts' : '');
+      $('endpos').textContent = r ? (i + 1) + '°' : '—';
+      $('endtime').textContent = !r ? 'No corriste esta carrera' : (r.time == null ? 'No llegaste a terminar' : 'Tiempo: ' + fmt(r.time)) + (tour ? ' · +' + r.pts + ' pts' : '');
       const rows = tour ? tour.table.map((x) => [x, x.pts + ' pts']) : room.results.map((x) => [x, x.time == null ? '' : fmt(x.time)]);
       $('endlabel').textContent = tour ? 'Tabla del torneo' : 'Posiciones';
       $('endlist').replaceChildren(...rows.map(([x, v], k) => {
@@ -109,9 +109,9 @@
       }));
       $('next').classList.toggle('hidden', !(mine.leader && pending));
       if (pending) $('next').textContent = 'Siguiente: ' + room.tracks[tour.tracks[tour.done]];
+      $('again').className = pending ? 'sec' : 'big';
       $('again').classList.toggle('hidden', !mine.leader);
       $('again').textContent = pending ? 'Terminar torneo' : 'Volver al lobby';
-      $('again').className = pending ? 'sec' : 'big';
       $('endmsg').classList.toggle('hidden', mine.leader);
     } else if (state === 'race') {
       showRace();
