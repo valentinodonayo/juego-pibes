@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juego Pibes</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="phone">
+<div class="center">
+  <h1>🏁 Juego Pibes</h1>
+  <p>Carreras en la pantalla grande, con el celular como control.</p>
+  <button class="big" onclick="location.href='/host'">Crear sala (pantalla grande)</button>
+  <p class="label">o unite desde el celular</p>
+  <form class="row" onsubmit="event.preventDefault(); const c = document.getElementById('c').value.trim().toUpperCase(); if (c) location.href = '/play?r=' + encodeURIComponent(c);">
+    <input id="c" maxlength="4" placeholder="CÓDIGO" autocomplete="off" style="width: 9em; text-transform: uppercase">
+    <button>Entrar</button>
+  </form>
+</div>
+</body>
+</html>

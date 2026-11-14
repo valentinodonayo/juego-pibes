@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juego Pibes - Pantalla</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="lobby" class="overlay">
+  <div class="panel join">
+    <h1>🏁 Juego Pibes</h1>
+    <div>Escaneá con el celu para entrar</div>
+    <img id="qr" alt="QR">
+    <div id="url"></div>
+    <div class="label">Código de sala</div>
+    <div id="code">····</div>
+  </div>
+  <div class="side">
+    <div class="panel">
+      <div class="label" style="margin-top:0">Jugadores (<span id="pcount">0</span>)</div>
+      <div id="plist"></div>
+      <div id="empty" style="opacity:.7">Todavía no entró nadie. Escaneá el QR.</div>
+    </div>
+    <div class="panel">
+      <div class="cfg">
+        <div><div class="label" style="margin-top:0">Pista</div><div class="stepper"><button data-cfg="track" data-d="-1">◀</button><span id="track"></span><button data-cfg="track" data-d="1">▶</button></div></div>
+        <div><div class="label" style="margin-top:0">Vueltas</div><div class="stepper"><button data-cfg="laps" data-d="-1">−</button><span id="laps"></span><button data-cfg="laps" data-d="1">+</button></div></div>
+        <div><div class="label" style="margin-top:0">Bots</div><div class="stepper"><button data-cfg="bots" data-d="-1">−</button><span id="bots"></span><button data-cfg="bots" data-d="1">+</button></div></div>
+      </div>
+      <div class="row" style="margin-top:2vh"><button id="start" class="big">¡EMPEZAR CARRERA!</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="results" class="overlay hidden" style="flex-direction:column; gap:2vh">
+  <h1>🏆 Resultados</h1>
+  <div id="rlist"></div>
+  <button id="again" class="big">Volver al lobby</button>
+</div>
+
+<button id="fs">⛶ Pantalla completa</button>
+<script src="/shared/tracks.js"></script>
+<script src="/shared/cars.js"></script>
+<script src="/host.js"></script>
+</body>
+</html>
